@@ -1,0 +1,18 @@
+# --- Archivos compilados (se generan solos, no se guardan) ---
+target/
+*.class
+*.jar
+*.war
+
+# --- Archivos de IntelliJ (configuración de TU ordenador) ---
+.idea/
+*.iml
+*.iws
+
+# --- Archivos del sistema operativo ---
+.DS_Store
+Thumbs.db
+
+# --- Archivos temporales y de logs ---
+*.log
+*.tmp
