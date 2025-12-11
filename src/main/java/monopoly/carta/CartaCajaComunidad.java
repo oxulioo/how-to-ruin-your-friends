@@ -13,7 +13,7 @@ public class CartaCajaComunidad extends Carta {
 
     @Override
     public void accion(Jugador jugador, Juego juego) throws MonopolyEtseException {
-        juego.notificarMensaje("Carta de Comunidad: " + descripcion);
+        juego.notificarCarta("Suerte","Carta de Comunidad: " + descripcion);
 
         switch(id) {
             case 1: // Balneario
@@ -37,7 +37,7 @@ public class CartaCajaComunidad extends Carta {
                 juego.moverJugadorACasilla(jugador, "Solar20", true);
                 break;
             default:
-                juego.notificarMensaje("Acción de comunidad no definida para ID: " + id);
+                juego.notificarCarta("Suerte","Acción de comunidad no definida para ID: " + id);
         }
     }
 

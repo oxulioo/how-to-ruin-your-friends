@@ -16,7 +16,7 @@ public class CartaSuerte extends Carta {
 
     @Override
     public void accion(Jugador jugador, Juego juego) throws MonopolyEtseException {
-        juego.notificarMensaje("Carta de Suerte: " + descripcion);
+        juego.notificarCarta("Comunidad", "Carta de Suerte: " + descripcion);
 
         switch (id) {
             case 1: // Viaje a Solar19
@@ -43,7 +43,7 @@ public class CartaSuerte extends Carta {
                 avanzarTransporteMasCercano(jugador, juego);
                 break;
             default:
-                juego.notificarMensaje("Acción de suerte no definida para ID: " + id);
+                juego.notificarCarta("Comunidad", "Acción de suerte no definida para ID: " + id);
         }
     }
 
@@ -55,7 +55,7 @@ public class CartaSuerte extends Carta {
                 otro.getEstadisticas().sumarCobroDeAlquileres(cantidad);
                 // (Al que paga se le cuenta como tasas/impuestos al ser carta de suerte)
                 jugador.getEstadisticas().sumarPagoTasasImpuestos(cantidad);
-                juego.notificarMensaje(jugador.getNombre() + " paga " + cantidad + "€ a " + otro.getNombre() + ".");
+                juego.notificarCarta("Comunidad", jugador.getNombre() + " paga " + cantidad + "€ a " + otro.getNombre() + ".");
             }
         }
     }
@@ -101,7 +101,7 @@ public class CartaSuerte extends Carta {
 
         // Nos movemos
         Casilla destino = juego.getTablero().encontrar_casilla(transporteMasCercano); //buscamos la casilla
-        juego.notificarMensaje("El transporte más cercano es " + transporteMasCercano + " (avanzas " + minDistancia + " casillas).");
+        juego.notificarCarta("Comunidad", "El transporte más cercano es " + transporteMasCercano + " (avanzas " + minDistancia + " casillas).");
 
 
 
@@ -110,7 +110,7 @@ public class CartaSuerte extends Carta {
             jugador.sumarFortuna(Valor.SUMA_VUELTA);
             jugador.getEstadisticas().sumarPasarPorSalida();
             jugador.setVueltas(jugador.getVueltas() + 1);
-            juego.notificarMensaje("Has pasado por Salida: cobras " + Valor.SUMA_VUELTA + "€.");
+            juego.notificarCarta("Comunidad", "Has pasado por Salida: cobras " + Valor.SUMA_VUELTA + "€.");
         }
 
         // Colocamos el avatar
@@ -133,8 +133,8 @@ public class CartaSuerte extends Carta {
 
                 long aPagar = alquilerBase * 2;
 
-                juego.notificarMensaje("La propiedad pertenece a " + dueno.getNombre() + ".");
-                juego.notificarMensaje("La carta te obliga a pagar el DOBLE del alquiler: " + aPagar + "€.");
+                juego.notificarCarta("Comunidad", "La propiedad pertenece a " + dueno.getNombre() + ".");
+                juego.notificarCarta("Comunidad", "La carta te obliga a pagar el DOBLE del alquiler: " + aPagar + "€.");
 
                 jugador.restarDinero((int) aPagar);
                 dueno.sumarFortuna((int) aPagar);
@@ -144,7 +144,7 @@ public class CartaSuerte extends Carta {
                 dueno.getEstadisticas().sumarCobroDeAlquileres(aPagar);
 
             } else if (dueno == null || dueno.getNombre().equals("Banca")) {
-                juego.notificarMensaje("Has llegado a " + p.getNombre() + ". Está libre y puedes comprarla.");
+                juego.notificarCarta("Comunidad", "Has llegado a " + p.getNombre() + ". Está libre y puedes comprarla.");
             }
         }
     }

@@ -112,7 +112,10 @@ public class Jugador {
         }
     }
 
-    public void sumarFortuna(int valor) { this.fortuna += valor; }
+    public void sumarFortuna(int valor) {
+        this.fortuna += valor;
+        if (listener != null) listener.onCambioFortuna(this.nombre, this.fortuna, valor);
+    }
 
     public boolean sumarGastos(int valor) {
         if (this.fortuna < valor) {
@@ -120,11 +123,13 @@ public class Jugador {
             return false;
         }
         this.fortuna -= valor;
+        if (listener != null) listener.onCambioFortuna(this.nombre, this.fortuna, -valor);
         return true;
     }
 
     public void restarDinero(int valor) {
         this.fortuna -= valor;
+        if (listener != null) listener.onCambioFortuna(this.nombre, this.fortuna, -valor);
         if(fortuna < 0) {
             hablar("ALERTA, USTED ESTÁ EN NÚMEROS ROJOS, REGULARICE SU SITUACIÓN ANTES DE ACABAR EL TURNO O SERÁ DECLARADO EN BANCARROTA.");
         }
@@ -209,6 +214,11 @@ public class Jugador {
     //vemos todos los tratos
     public java.util.Collection<Trato> getListaTratos() {
         return tratosRecibidos.values();
+    }
+
+    @Override
+    public String toString() {
+        return this.nombre; // Cuando alguien intente imprimir al jugador, saldrá su nombre
     }
 
 }

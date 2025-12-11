@@ -53,6 +53,11 @@ public class Juego {
         return jugadores;
     }
 
+    public int getTurno() {
+        return turno;
+    }
+    public void setTurno(int turno) {}
+
     public void verTablero() {
         if (tablero == null) {
             notificarMensaje("No hay tablero cargado.");
@@ -89,16 +94,38 @@ public class Juego {
         for (JuegoListener l : listeners) l.onError(err);
     }
 
+    public void notificarCarta(String tipo, String mensaje) {
+        for (JuegoListener l : listeners) l.onCartaRecibida(tipo, mensaje);
+    }
+
+    // Método para avisar a la ventana de que alguien se ha movido
+    public void notificarJugadorMovido(String nombreJugador, String nombreCasilla, int nuevaPosicion) {
+        for (JuegoListener l : listeners) {
+            l.onJugadorMovido(nombreJugador, nombreCasilla, nuevaPosicion);
+        }
+    }
+
+    public void notificarCambioFortuna(String nombre, long fortuna, long cambio) {
+        for (JuegoListener l : listeners) {
+            l.onCambioFortuna(nombre, fortuna, cambio);
+        }
+    }
+
     // 3. El Publicador (puente para los jugadores)
     private final JuegoListener publicador = new JuegoListener() {
         @Override public void onMensaje(String m) { notificarMensaje(m); }
         @Override public void onError(String e) { notificarError(e); }
         @Override public void onJugadorMovido(String j, String c, int n) {}
-        @Override public void onCambioFortuna(String j, long f, long c) {}
+        @Override public void onCambioFortuna(String j, long f, long c) {
+            notificarCambioFortuna(j, f, c);
+        }
         @Override public void onDadosLanzados(int d1, int d2, boolean db) {}
         @Override public void onTurnoCambiado(String j) {}
         @Override public void onPropiedadComprada(String j, String p, long pr) {}
         @Override public void onCambioEstadoCarcel(String j, boolean e) {}
+        @Override public void onCartaRecibida(String t, String m) {
+            notificarCarta(t, m);
+        }
     };
 
     public void mostrarJugadorActual() throws MonopolyEtseException{
@@ -119,6 +146,7 @@ public class Juego {
 
         Jugador j;
         j = new Jugador(nombre, tipoAvatar, salida, avatares);
+        j.setListener(this.publicador);
         if (j.getNombre() == null) {
             throw new AccionInvalidaException("Error creando jugador");
         }
@@ -383,7 +411,7 @@ public class Juego {
             Avatar a = actual.getAvatar();
             a.moverAvatar(tablero.getPosiciones(), suma);
             Casilla c = a.getPosicion();
-
+            notificarJugadorMovido(actual.getNombre(), a.getPosicion().getNombre(), a.getPosicion().getPosicion());
 
             if (c instanceof IrCarcel) { //si de es la casilla de ir a la carcel
                actual.encarcelar();
@@ -473,7 +501,7 @@ public class Juego {
 
         Jugador propietario = prop.getDueno();
         if (propietario != null && propietario != this.getBanca()) { //miramos que no tenga dueño
-            throw new AccionInvalidaException("Esta propiedad no esta en venta."+ prop.getDueno());
+            throw new AccionInvalidaException("Esta propiedad no esta en venta. La propiedad actualmente pertenece a "+ prop.getDueno()+".");
         }
 
         int precio = prop.getValor();
@@ -614,10 +642,17 @@ public class Juego {
         doblesConsecutivos = 0;
         tirado = false;
 
+        // --- AÑADIR ESTO: AVISAR A LA PANTALLA ---
         if (hayJugadores()) {
             Jugador siguiente = jugadores.get(turno);
+            // Avisamos por texto (chat)
             notificarMensaje("Nuevo turno para: " + siguiente.getNombre());
             notificarMensaje("Fortuna: " + siguiente.getFortuna() + "€");
+
+            // ¡IMPORTANTE! Avisamos al panel lateral para que cambie la etiqueta
+            for (JuegoListener l : listeners) {
+                l.onTurnoCambiado(siguiente.getNombre());
+            }
         } else {
             notificarMensaje("La partida ha terminado. No quedan jugadores.");
         }

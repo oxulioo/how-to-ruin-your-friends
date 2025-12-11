@@ -12,6 +12,7 @@ public interface JuegoListener {
     void onTurnoCambiado(String nuevoJugador);
     void onPropiedadComprada(String j, String p, long pr);
     void onCambioEstadoCarcel(String j, boolean e);
+    void onCartaRecibida(String tipo, String mensaje);
 
     // Aquí iremos añadiendo más cosas según las necesitemos (compras, cárcel, etc.)
 }
