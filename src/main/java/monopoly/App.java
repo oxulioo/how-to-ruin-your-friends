@@ -13,45 +13,82 @@ public class App extends Application implements JuegoListener {
 
     private Juego juego;
     private TextArea textArea;
+
     @Override
     public void start(Stage stage) {
-        // 1. PREPARAR EL CONTENIDO (Los actores)
-        // Vamos a poner una etiqueta de texto simple para probar
+        // --- A. INICIALIZAR EL MOTOR ---
         juego = new Juego();
         juego.addListener(this);
 
+
+        // --- B. PREPARAR LA SALIDA (TEXTO) ---
         textArea = new TextArea();
         textArea.setEditable(false);
-        textArea.setWrapText(true);
+        // Fuente monoespaciada para que el tablero cuadre perfecto
+        textArea.setStyle("-fx-font-family: 'monospaced'; -fx-font-size: 12;");
 
-        // Un StackPane es un contenedor que apila cosas en el centro
-        BorderPane organizador = new BorderPane();
-        organizador.setCenter(textArea); // Añadimos la etiqueta al panel
 
-        // 2. CREAR LA ESCENA (La película)
-        // Creamos una escena de 640x480 píxeles con nuestro organizador dentro
-        Scene scene = new Scene(organizador, 800, 600);
-
-        // 3. CONFIGURAR EL ESCENARIO (La ventana)
-        stage.setTitle("How to Ruin Your Friends - V2"); // Título de la barra superior
-        stage.setScene(scene); // Le decimos qué escena mostrar
-        stage.show(); // ¡Telón arriba!
-
-        juego.notificarMensaje("Iniciando el sistema del juego.");
+        // CORRECCIÓN: Primero iniciamos/limpiamos, luego creamos jugadores
+        // juego.iniciarPartida(); // Opcional, el constructor ya lo hace
         try {
-            // Creamos unos jugadores de prueba directamente en el motor
             juego.crearJugador("Pedro", "pelota");
             juego.crearJugador("Maria", "coche");
-            juego.iniciarPartida(); // Esto imprimirá cosas como el orden de turnos
+            juego.notificarMensaje("--- PARTIDA LISTA PARA JUGAR ---");
         } catch (Exception e) {
-            juego.notificarError(e.getMessage());
+            onError(e.getMessage());
         }
+
+        // --- C. ZONA DE CONTROLES (BOTONES) ---
+        // 1. Crear los botones
+        javafx.scene.control.Button btnLanzar = new javafx.scene.control.Button("🎲 Lanzar Dados");
+        javafx.scene.control.Button btnTerminar = new javafx.scene.control.Button("⏭ Terminar Turno");
+        javafx.scene.control.Button btnTablero = new javafx.scene.control.Button("🗺 Ver Tablero");
+        javafx.scene.control.Button btnSalir = new javafx.scene.control.Button("❌ Salir");
+
+        // 2. Darles acción (Conectar botón -> Método del Juego)
+        btnLanzar.setOnAction(e -> ejecutarAccion(() -> juego.lanzarDados()));
+        btnTerminar.setOnAction(e -> ejecutarAccion(() -> juego.acabarTurno()));
+        btnTablero.setOnAction(e -> ejecutarAccion(() -> juego.verTablero()));
+        btnSalir.setOnAction(e -> System.exit(0));
+
+        // 3. Organizar los botones en una caja horizontal (HBox)
+        javafx.scene.layout.HBox panelBotones = new javafx.scene.layout.HBox(10); // 10px de separación
+        panelBotones.setPadding(new javafx.geometry.Insets(10)); // Margen interior
+        panelBotones.setAlignment(javafx.geometry.Pos.CENTER); // Centrados
+        panelBotones.getChildren().addAll(btnLanzar, btnTerminar, btnTablero, btnSalir);
+
+        // --- D. MONTAJE FINAL (BorderPane) ---
+        BorderPane organizador = new BorderPane();
+        organizador.setCenter(textArea);  // Texto en el centro
+        organizador.setBottom(panelBotones); // Botones abajo
+
+        Scene scene = new Scene(organizador, 900, 700);
+        stage.setTitle("How to Ruin Your Friends - GUI v1.0");
+        stage.setScene(scene);
+        stage.show();
     }
 
+    // 1. Definimos nuestra propia interfaz que SÍ permite lanzar excepciones
+    @FunctionalInterface
+    interface AccionPeligrosa {
+        void ejecutar() throws Exception;
+    }
+
+    // 2. Modificamos el método para usar nuestra interfaz en vez de Runnable
+    private void ejecutarAccion(AccionPeligrosa accion) {
+        try {
+            accion.ejecutar(); // Ahora Java deja ejecutar esto aunque lance error
+        } catch (Exception e) {
+            // Si explota, capturamos el error y lo mostramos en la pantalla
+            onError(e.getMessage());
+        }
+    }
+    
     @Override
     public void onMensaje(String mensaje) {
         // Cuando el juego dice algo, lo añadimos al TextArea
-        textArea.appendText(mensaje + "\n");
+        String mensajeLimpio = mensaje.replaceAll("\u001B\\[[;\\d]*m", "");
+        textArea.appendText(mensajeLimpio + "\n");
     }
 
     @Override

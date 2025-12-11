@@ -151,11 +151,6 @@ public class Solar extends Propiedad {
         }
     }
 
-    public void hipotecar() {
-        this.sethipotecada(1);
-    }
-
-
     @Override
     public String toString() {
         return infoCasilla();

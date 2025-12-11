@@ -25,8 +25,16 @@ public class Juego {
 
     public Juego() {
         this.banca = new Jugador();
-        this.tablero = new Tablero(banca);
         this.jugadores = new ArrayList<>();
+        this.avatares = new ArrayList<>();
+        this.turno = 0;
+        this.lanzamientos = 0;
+        this.tirado = false;
+        this.dado1 = new Dado();
+        this.dado2 = new Dado();
+        this.tablero = new Tablero(this.banca);
+        this.baraja = new Baraja(); //Reiniciamos baraja
+        this.baraja.barajar();
     }
 
     public Jugador getBanca() {
