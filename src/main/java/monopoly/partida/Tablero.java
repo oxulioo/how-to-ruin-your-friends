@@ -14,7 +14,7 @@ public class Tablero {
     private final Jugador banca;
 
     public ArrayList<ArrayList<Casilla>> getPosiciones() {
-        return posiciones;
+        return this.posiciones;
     }
 
     public Tablero(Jugador banca) {
@@ -29,8 +29,6 @@ public class Tablero {
 
         generarGrupos();
     }
-
-
 
     private Casilla crearSolar(String nombre, int pos) {
 

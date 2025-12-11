@@ -65,7 +65,7 @@ public abstract class Propiedad extends Casilla {
 
     //metodo existente
     public void comprar(Jugador solicitante) {
-        int precio = Math.max(0, this.valor);
+        int precio = this.valor;
 
         if (!solicitante.sumarGastos(precio)) {
             solicitante.hablar(solicitante.getNombre() + " no tiene suficiente dinero para comprar " + this.nombre);

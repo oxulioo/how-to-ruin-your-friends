@@ -5,6 +5,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
@@ -17,17 +18,21 @@ public class App extends Application implements JuegoListener {
     private javafx.scene.control.Label lblTurno;
     private javafx.scene.control.Label lblDinero;
     private javafx.scene.control.Label lblPosicion;
+    private javafx.scene.layout.GridPane tableroGrafico;
+    private final java.util.List<javafx.scene.layout.StackPane> casillasVisuales = new java.util.ArrayList<>();
+    private final java.util.Map<String, javafx.scene.shape.Circle> fichas =  new java.util.HashMap<>();
 
     @Override
     public void start(Stage stage) {
         // --- A. INICIALIZAR EL MOTOR ---
         juego = new Juego();
         juego.addListener(this);
-
+        tableroGrafico = crearTableroGrafico();
 
         // --- B. PREPARAR LA SALIDA (TEXTO) ---
         textArea = new TextArea();
         textArea.setEditable(false);
+        textArea.setPrefHeight(100);
         // Fuente monoespaciada para que el tablero cuadre perfecto
         textArea.setStyle("-fx-font-family: 'monospaced'; -fx-font-size: 12;");
 
@@ -38,6 +43,8 @@ public class App extends Application implements JuegoListener {
             juego.crearJugador("Pedro", "pelota");
             juego.crearJugador("Maria", "coche");
             juego.notificarMensaje("--- PARTIDA LISTA PARA JUGAR ---");
+            crearFichaVisual("Pedro", javafx.scene.paint.Color.RED);
+            crearFichaVisual("Maria", javafx.scene.paint.Color.BLUE);
         } catch (Exception e) {
             onError(e.getMessage());
         }
@@ -146,7 +153,8 @@ public class App extends Application implements JuegoListener {
 
         // --- D. MONTAJE FINAL (BorderPane) ---
         BorderPane organizador = new BorderPane();
-        organizador.setCenter(textArea);  // Texto en el centro
+        organizador.setTop(textArea);
+        organizador.setCenter(tableroGrafico);// tablero en el centro
         organizador.setBottom(panelBotones); // Botones abajo
         organizador.setRight(panelInfo);
 
@@ -154,8 +162,9 @@ public class App extends Application implements JuegoListener {
             onTurnoCambiado(juego.getJugadores().get(0).getNombre());
         }
 
-        Scene scene = new Scene(organizador, 900, 700);
+        Scene scene = new Scene(organizador);
         stage.setTitle("How to Ruin Your Friends - GUI v1.0");
+        stage.setMaximized(true);
         stage.setScene(scene);
         stage.show();
     }
@@ -197,7 +206,41 @@ public class App extends Application implements JuegoListener {
 
     // El resto de métodos los dejamos vacíos por ahora (los usaremos cuando dibujemos el tablero)
     @Override public void onDadosLanzados(int d1, int d2, boolean db) {}
-    @Override public void onPropiedadComprada(String j, String p, long pr) {}
+    @Override
+    public void onPropiedadComprada(String nombreJugador, String nombrePropiedad, long precio) {
+        javafx.application.Platform.runLater(() -> {
+            try {
+                // 1. Obtener el color del jugador
+                // (Truco: Miramos de qué color es su ficha en nuestro mapa)
+                javafx.scene.paint.Color colorJugador = (javafx.scene.paint.Color) fichas.get(nombreJugador).getFill();
+
+                // Convertimos el color de JavaFX a formato texto CSS (ej: "0xff0000ff" -> "#ff0000")
+                String colorHex = "#" + colorJugador.toString().substring(2, 8);
+
+                // 2. Buscar la casilla visual que corresponde a esa propiedad
+                // Recorremos las 40 casillas buscando la que tenga el nombre correcto
+                for (javafx.scene.layout.StackPane casilla : casillasVisuales) {
+                    // La casilla tiene dentro un Label, lo sacamos para leer el texto
+                    javafx.scene.control.Label lbl = (javafx.scene.control.Label) casilla.getChildren().get(0);
+
+                    if (lbl.getText().equals(nombrePropiedad)) {
+                        // 3. ¡ENCONTRADA! Le cambiamos el borde
+                        // Mantenemos el fondo blanco, pero ponemos borde grueso del color del dueño
+                        casilla.setStyle("-fx-background-color: white; " +
+                                "-fx-border-color: " + colorHex + "; " +
+                                "-fx-border-width: 4;"); // Borde de 4px (muy visible)
+                        break; // Ya la encontramos, dejamos de buscar
+                    }
+                }
+
+                // Extra: Un pequeño popup de celebración
+                onCartaRecibida("COMPRA", nombreJugador + " ha adquirido " + nombrePropiedad);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
     @Override public void onCambioEstadoCarcel(String j, boolean e) {}
 
     @Override
@@ -245,12 +288,96 @@ public class App extends Application implements JuegoListener {
     public void onJugadorMovido(String nombreJugador, String nombreCasilla, int nuevaPosicion) {
         javafx.application.Platform.runLater(() -> {
             try {
+                // 1. Actualizar texto lateral (lo que ya tenías)
                 monopoly.jugador.Jugador actual = juego.getJugadores().get(juego.getTurno());
                 if (actual.getNombre().equals(nombreJugador)) {
                     lblPosicion.setText("Posición: " + nombreCasilla);
                 }
-            } catch (Exception e) {}
+
+                // --- 2. MOVER LA FICHA VISUAL ---
+                if (fichas.containsKey(nombreJugador)) {
+                    javafx.scene.shape.Circle ficha = fichas.get(nombreJugador);
+
+                    // Truco de JavaFX: Para mover un nodo, primero lo quitamos de su padre actual
+                    // (sea cual sea la casilla donde esté)
+                    ((javafx.scene.layout.Pane) ficha.getParent()).getChildren().remove(ficha);
+
+                    // Y lo añadimos a la nueva casilla (usando la lista que creamos en el Paso 2)
+                    casillasVisuales.get(nuevaPosicion).getChildren().add(ficha);
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace(); // Por si acaso
+            }
         });
+    }
+
+    // --- MÉTODO PARA DIBUJAR EL TABLERO GRÁFICO ---
+    private javafx.scene.layout.GridPane crearTableroGrafico() {
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+
+        // Estilo del tablero (Fondo azulito suave y huecos)
+        grid.setHgap(2);
+        grid.setVgap(2);
+        grid.setStyle("-fx-background-color: #D4F1F4; -fx-padding: 10; -fx-border-color: black; -fx-border-width: 2;");
+        grid.setAlignment(javafx.geometry.Pos.CENTER);
+
+        // Generamos las 40 casillas del perímetro
+        for (int i = 0; i < 40; i++) {
+            // 1. Crear la cajita visual
+            javafx.scene.layout.StackPane casilla = new javafx.scene.layout.StackPane();
+            casilla.setPrefSize(60, 60); // Tamaño fijo de 60x60 píxeles
+            casillasVisuales.add(casilla);
+            casilla.setStyle("-fx-background-color: white; -fx-border-color: black; -fx-border-width: 1;");
+
+            // 2. Intentar ponerle nombre (Si falla, ponemos el número)
+            String texto = "C" + i;
+            try {
+                // NOTA: Esto requiere que tengas los getters públicos en Juego y Tablero.
+                // Si no los tienes, saltará al catch y pondrá el número, ¡no pasa nada!
+                monopoly.casilla.Casilla c = juego.getTablero().getPosiciones().get(i).get(0);
+                texto = c.getNombre();
+                // Cortamos nombres largos para que quepan
+                if (texto.length() > 8) texto = texto.substring(0, 8) + ".";
+            } catch (Exception e) {
+                // Si no podemos leer el nombre, dejamos el número (C0, C1...)
+            }
+
+            // 3. Etiqueta de texto
+            javafx.scene.control.Label lbl = new javafx.scene.control.Label(texto);
+            lbl.setStyle("-fx-font-size: 9px; -fx-font-weight: bold; -fx-text-alignment: center;");
+            lbl.setWrapText(true);
+            casilla.getChildren().add(lbl);
+
+            // 4. MATEMÁTICAS: Calcular posición (x, y) en la cuadrícula 11x11
+            int x = 0, y = 0;
+            if (i >= 0 && i <= 10) {        // Lado Sur (Salida -> Cárcel)
+                x = 10 - i; y = 10;
+            } else if (i > 10 && i <= 20) { // Lado Oeste (Cárcel -> Parking)
+                x = 0; y = 10 - (i - 10);
+            } else if (i > 20 && i <= 30) { // Lado Norte (Parking -> Ir a Cárcel)
+                x = i - 20; y = 0;
+            } else if (i > 30 && i < 40) {  // Lado Este (Ir a Cárcel -> Salida)
+                x = 10; y = i - 30;
+            }
+
+            // Añadimos la casilla a la cuadrícula
+            grid.add(casilla, x, y);
+        }
+        return grid;
+    }
+
+    private void crearFichaVisual(String nombre, javafx.scene.paint.Color color) {
+        // Creamos un círculo de radio 10
+        javafx.scene.shape.Circle ficha = new javafx.scene.shape.Circle(10, color);
+        ficha.setStroke(javafx.scene.paint.Color.BLACK); // Borde negro para que se vea mejor
+        ficha.setStrokeWidth(2);
+
+        // Guardamos la ficha en el mapa
+        fichas.put(nombre, ficha);
+
+        // La ponemos en la casilla de Salida (Posición 0) por defecto
+        casillasVisuales.get(0).getChildren().add(ficha);
     }
 
     // Este main es necesario para engañar a Java y que arranque JavaFX

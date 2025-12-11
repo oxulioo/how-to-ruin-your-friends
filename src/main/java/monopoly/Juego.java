@@ -42,7 +42,7 @@ public class Juego {
     }
 
     public Tablero getTablero() {
-        return tablero;
+        return this.tablero;
     }
 
     public int getJugadoresNum() {
@@ -98,6 +98,12 @@ public class Juego {
         for (JuegoListener l : listeners) l.onCartaRecibida(tipo, mensaje);
     }
 
+    public void notificarPropiedadComprada(String nombreJugador, String nombrePropiedad, long precio) {
+        for (JuegoListener l : listeners) {
+            l.onPropiedadComprada(nombreJugador, nombrePropiedad, precio);
+        }
+    }
+
     // Método para avisar a la ventana de que alguien se ha movido
     public void notificarJugadorMovido(String nombreJugador, String nombreCasilla, int nuevaPosicion) {
         for (JuegoListener l : listeners) {
@@ -121,7 +127,9 @@ public class Juego {
         }
         @Override public void onDadosLanzados(int d1, int d2, boolean db) {}
         @Override public void onTurnoCambiado(String j) {}
-        @Override public void onPropiedadComprada(String j, String p, long pr) {}
+        @Override public void onPropiedadComprada(String j, String p, long pr) {
+            notificarPropiedadComprada(j, p, pr);
+        }
         @Override public void onCambioEstadoCarcel(String j, boolean e) {}
         @Override public void onCartaRecibida(String t, String m) {
             notificarCarta(t, m);
@@ -486,24 +494,18 @@ public class Juego {
         Casilla cas = tablero.encontrar_casilla(nombre);
         if (cas == null) {
            throw new AccionInvalidaException ("No existe la casilla con ese nombre");
-
         }
-
-
         if (!(cas instanceof Propiedad prop)) {
             throw new AccionInvalidaException("Solo se puede comprar propiedades.");
         }
-
         Casilla pos = actual.getAvatar().getPosicion();
         if (pos == null || pos != cas) {
             throw new AccionInvalidaException("No puedes comprar propiedades fuera de tu casilla actual.");
         }
-
         Jugador propietario = prop.getDueno();
         if (propietario != null && propietario != this.getBanca()) { //miramos que no tenga dueño
             throw new AccionInvalidaException("Esta propiedad no esta en venta. La propiedad actualmente pertenece a "+ prop.getDueno()+".");
         }
-
         int precio = prop.getValor();
         double saldo = actual.getFortuna();
         if (saldo < precio) {
@@ -511,7 +513,7 @@ public class Juego {
             throw new SaldoInsuficienteException(actual.getNombre(),faltante,0);
         }
         prop.comprar(actual); // Llama al comprar de Propiedad
-
+        notificarPropiedadComprada(actual.getNombre(), prop.getNombre(), prop.getValor());
         if (prop.getDueno() == actual) {
             actual.getEstadisticas().sumarDineroInvertido(precio);
         }
