@@ -1,387 +1,234 @@
 package monopoly;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-// Extender de "Application" convierte esta clase en una App gráfica
+// IMPORTAMOS LOS NUEVOS COMPONENTES
+import monopoly.gui.FichaGUI;
+import monopoly.gui.PanelInfo;
+import monopoly.gui.TableroGUI;
+import monopoly.logics.logica.Juego;
+
+import java.util.HashMap;
+import java.util.Map;
+
 public class App extends Application implements JuegoListener {
 
     private Juego juego;
-    private TextArea textArea;
-
-    private javafx.scene.control.Label lblTurno;
-    private javafx.scene.control.Label lblDinero;
-    private javafx.scene.control.Label lblPosicion;
-    private javafx.scene.layout.GridPane tableroGrafico;
-    private final java.util.List<javafx.scene.layout.StackPane> casillasVisuales = new java.util.ArrayList<>();
-    private final java.util.Map<String, javafx.scene.shape.Circle> fichas =  new java.util.HashMap<>();
+    private TableroGUI tableroGui;
+    private PanelInfo panelInfo;
+    private TextArea areaLog;
+    private final Map<String, FichaGUI> fichasVisuales = new HashMap<>();
 
     @Override
     public void start(Stage stage) {
-        // --- A. INICIALIZAR EL MOTOR ---
         juego = new Juego();
         juego.addListener(this);
-        tableroGrafico = crearTableroGrafico();
 
-        // --- B. PREPARAR LA SALIDA (TEXTO) ---
-        textArea = new TextArea();
-        textArea.setEditable(false);
-        textArea.setPrefHeight(100);
-        // Fuente monoespaciada para que el tablero cuadre perfecto
-        textArea.setStyle("-fx-font-family: 'monospaced'; -fx-font-size: 12;");
+        // GUI Components
+        tableroGui = new TableroGUI(juego);
+        panelInfo = new PanelInfo();
 
+        areaLog = new TextArea();
+        areaLog.setEditable(false);
+        areaLog.setPrefHeight(40);
+        areaLog.setStyle("-fx-font-family: 'monospaced'; -fx-font-size: 11;");
 
-        // CORRECCIÓN: Primero iniciamos/limpiamos, luego creamos jugadores
-        // juego.iniciarPartida(); // Opcional, el constructor ya lo hace
+        // Inicializar Partida
         try {
             juego.crearJugador("Pedro", "pelota");
             juego.crearJugador("Maria", "coche");
-            juego.notificarMensaje("--- PARTIDA LISTA PARA JUGAR ---");
-            crearFichaVisual("Pedro", javafx.scene.paint.Color.RED);
-            crearFichaVisual("Maria", javafx.scene.paint.Color.BLUE);
-        } catch (Exception e) {
-            onError(e.getMessage());
-        }
 
-        // --- C. ZONA DE CONTROLES (BOTONES) ---
-        // 1. Crear los botones
-        javafx.scene.control.Button btnLanzar = new javafx.scene.control.Button("🎲 Lanzar Dados");
-        javafx.scene.control.Button btnTerminar = new javafx.scene.control.Button("⏭ Terminar Turno");
-        javafx.scene.control.Button btnTablero = new javafx.scene.control.Button("🗺 Ver Tablero");
-        javafx.scene.control.Button btnSalir = new javafx.scene.control.Button("❌ Salir");
-        javafx.scene.control.Button btnComprar = new javafx.scene.control.Button("💸 Comprar Propiedad");
+            // Crear Fichas Visuales
+            crearFicha("Pedro", "pelota");
+            crearFicha("Maria", "coche");
 
-        // Botones de Construcción Avanzada
-        javafx.scene.control.Button btnCasa = new javafx.scene.control.Button("🏠 Edificar Casa");
-        javafx.scene.control.Button btnHotel = new javafx.scene.control.Button("🏨 Edificar Hotel");
-        javafx.scene.control.Button btnPiscina = new javafx.scene.control.Button("🏊 Edificar Piscina");
-        javafx.scene.control.Button btnPista = new javafx.scene.control.Button("🎾 Edificar Pista Deportiva");
+            if (!juego.getJugadores().isEmpty()) {
+                onTurnoCambiado(juego.getJugadores().get(0).getNombre());
+            }
+        } catch (Exception e) { onError(e.getMessage()); }
 
-        // Botón de Finanzas
-        javafx.scene.control.Button btnHipotecar = new javafx.scene.control.Button("📉 Hipotecar");
-        javafx.scene.control.Button btnDeshipotecar = new javafx.scene.control.Button("📈 Deshipotecar");
+        // Layout Principal
+        BorderPane root = new BorderPane();
+        root.setCenter(tableroGui.getNodoRaiz());
+        root.setRight(panelInfo.getNodoRaiz());
+        root.setTop(areaLog);
+        root.setBottom(crearBotonera());
 
-        // 2. Darles acción (Conectar botón -> Método del Juego)
-        btnLanzar.setOnAction(e -> ejecutarAccion(() -> juego.lanzarDados()));
-        btnTerminar.setOnAction(e -> ejecutarAccion(() -> juego.acabarTurno()));
-        btnTablero.setOnAction(e -> ejecutarAccion(() -> juego.verTablero()));
-        btnSalir.setOnAction(e -> System.exit(0));
-        btnComprar.setOnAction(e -> ejecutarAccion(() -> {
-            // 1. Preguntamos al juego: "¿De quién es el turno?"
-            // (Nota: Esto requiere que tengas getters en Juego.java, ahora los revisamos)
-            monopoly.jugador.Jugador jugadorActual = juego.getJugadores().get(juego.getTurno());
-
-            // 2. Preguntamos: "¿Dónde está este señor?"
-            monopoly.casilla.Casilla casillaActual = jugadorActual.getAvatar().getPosicion();
-
-            // 3. Ejecutamos la orden de compra con el nombre exacto
-            juego.comprar(casillaActual.getNombre());
-        }));
-        // Acción de Edificar Casa
-        btnCasa.setOnAction(e -> ejecutarAccion(() -> {
-            // El método edificarCasa() de Juego ya sabe que tiene que construir
-            // donde esté el jugador actual, así que es muy fácil:
-            juego.edificarCasa();
-        }));
-        // Acción de Hipotecar (La casilla actual)
-        btnHipotecar.setOnAction(e -> ejecutarAccion(() -> {
-            // 1. Buscamos quién juega
-            monopoly.jugador.Jugador actual = juego.getJugadores().get(juego.getTurno());
-            // 2. Buscamos dónde está
-            monopoly.casilla.Casilla casilla = actual.getAvatar().getPosicion();
-
-            // 3. Ejecutamos la hipoteca
-            // (El método hipotecar pide el NOMBRE de la casilla)
-            juego.hipotecar(casilla.getNombre());
-        }));
-        // --- Acciones de Construcción ---
-        btnHotel.setOnAction(e -> ejecutarAccion(() -> juego.edificarHotel()));
-        btnPiscina.setOnAction(e -> ejecutarAccion(() -> juego.edificarPiscina()));
-        btnPista.setOnAction(e -> ejecutarAccion(() -> juego.edificarPista()));
-        // --- Acción de Deshipotecar (Lo contrario a hipotecar) ---
-        btnDeshipotecar.setOnAction(e -> ejecutarAccion(() -> {
-            // 1. Buscamos quién juega
-            monopoly.jugador.Jugador actual = juego.getJugadores().get(juego.getTurno());
-            // 2. Buscamos dónde está
-            monopoly.casilla.Casilla casilla = actual.getAvatar().getPosicion();
-            // 3. Ejecutamos la deshipoteca
-            juego.deshipotecar(casilla.getNombre());
-        }));
-
-
-        // --- NUEVO: PANEL DE INFORMACIÓN LATERAL ---
-        lblTurno = new javafx.scene.control.Label("Turno: -");
-        lblTurno.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: blue;");
-
-        lblDinero = new javafx.scene.control.Label("Dinero: - €");
-        lblDinero.setStyle("-fx-font-size: 16px; -fx-text-fill: green;");
-
-        lblPosicion = new javafx.scene.control.Label("Posición: Salida");
-        lblPosicion.setStyle("-fx-font-size: 14px;");
-
-        // Caja vertical para poner estos datos a la derecha
-        javafx.scene.layout.VBox panelInfo = new javafx.scene.layout.VBox(20); // 20px de separación
-        panelInfo.setPadding(new javafx.geometry.Insets(20));
-        panelInfo.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #ccc;"); // Fondo grisáceo
-        panelInfo.setPrefWidth(200); // Ancho fijo
-        panelInfo.getChildren().addAll(new javafx.scene.control.Label("--- ESTADO ---"), lblTurno, lblDinero, lblPosicion);
-
-
-
-        // --- ORGANIZACIÓN VISUAL EN DOS FILAS ---
-
-        // Fila 1: Acciones de Turno y Básicas
-        javafx.scene.layout.HBox filaSuperior = new javafx.scene.layout.HBox(10);
-        filaSuperior.setAlignment(javafx.geometry.Pos.CENTER);
-        filaSuperior.getChildren().addAll(btnLanzar, btnComprar, btnHipotecar, btnDeshipotecar, btnTerminar);
-
-        // Fila 2: Construcción (Edificios) y Sistema
-        javafx.scene.layout.HBox filaInferior = new javafx.scene.layout.HBox(10);
-        filaInferior.setAlignment(javafx.geometry.Pos.CENTER);
-        filaInferior.getChildren().addAll(btnCasa, btnHotel, btnPiscina, btnPista, btnTablero, btnSalir);
-
-        // Contenedor Vertical (Columna que guarda las dos filas)
-        javafx.scene.layout.VBox panelBotones = new javafx.scene.layout.VBox(10); // 10px de separación vertical
-        panelBotones.setPadding(new javafx.geometry.Insets(15));
-        panelBotones.getChildren().addAll(filaSuperior, filaInferior);
-
-        // --- D. MONTAJE FINAL (BorderPane) ---
-        BorderPane organizador = new BorderPane();
-        organizador.setTop(textArea);
-        organizador.setCenter(tableroGrafico);// tablero en el centro
-        organizador.setBottom(panelBotones); // Botones abajo
-        organizador.setRight(panelInfo);
-
-        if (!juego.getJugadores().isEmpty()) {
-            onTurnoCambiado(juego.getJugadores().get(0).getNombre());
-        }
-
-        Scene scene = new Scene(organizador);
-        stage.setTitle("How to Ruin Your Friends - GUI v1.0");
+        Scene scene = new Scene(root);
+        stage.setTitle("Monopoly - GUI Final");
         stage.setMaximized(true);
         stage.setScene(scene);
         stage.show();
     }
 
-    // 1. Definimos nuestra propia interfaz que SÍ permite lanzar excepciones
-    @FunctionalInterface
-    interface AccionPeligrosa {
-        void ejecutar() throws Exception;
+    private void crearFicha(String nombre, String tipo) {
+        FichaGUI ficha = new FichaGUI(nombre, tipo);
+        fichasVisuales.put(nombre, ficha);
+        // Colocar en Salida (Posición 0)
+        ficha.colocarEn(tableroGui.getContenedor(0));
     }
 
-    // 2. Modificamos el método para usar nuestra interfaz en vez de Runnable
-    private void ejecutarAccion(AccionPeligrosa accion) {
-        try {
-            accion.ejecutar(); // Ahora Java deja ejecutar esto aunque lance error
-        } catch (Exception e) {
-            // Si explota, capturamos el error y lo mostramos en la pantalla
-            onError(e.getMessage());
-        }
-    }
-    
-    @Override
-    public void onMensaje(String mensaje) {
-        // Cuando el juego dice algo, lo añadimos al TextArea
-        String mensajeLimpio = mensaje.replaceAll("\u001B\\[[;\\d]*m", "");
-        textArea.appendText(mensajeLimpio + "\n");
+    private VBox crearBotonera() {
+        // --- 1. CREACIÓN DE TODOS LOS BOTONES ---
+        // Acciones de Turno
+        Button btnLanzar = new Button("🎲 Lanzar");
+        Button btnTerminar = new Button("⏭ Terminar");
+        Button btnSalir = new Button("❌ Salir");
+
+        // Acciones de Propiedad
+        Button btnComprar = new Button("💸 Comprar");
+        Button btnHipotecar = new Button("📉 Hipotecar");
+        Button btnDeshipotecar = new Button("📈 Deshipotecar");
+
+        // Acciones de Construcción
+        Button btnCasa = new Button("🏠 Casa");
+        Button btnHotel = new Button("🏨 Hotel");
+        Button btnPiscina = new Button("🏊 Piscina");
+        Button btnPista = new Button("🎾 Pista");
+
+        // --- 2. ASIGNACIÓN DE ACCIONES ---
+        btnLanzar.setOnAction(e -> safeRun(() -> juego.lanzarDados()));
+        btnTerminar.setOnAction(e -> safeRun(() -> juego.acabarTurno()));
+        btnSalir.setOnAction(e -> System.exit(0));
+
+        // Comprar: Detecta dónde estás y compra
+        btnComprar.setOnAction(e -> safeRun(() -> {
+            var actual = juego.getJugadores().get(juego.getTurno());
+            juego.comprar(actual.getAvatar().getPosicion().getNombre());
+        }));
+
+        // Finanzas: Detecta dónde estás e hipoteca/deshipoteca
+        btnHipotecar.setOnAction(e -> safeRun(() -> {
+            var actual = juego.getJugadores().get(juego.getTurno());
+            juego.hipotecar(actual.getAvatar().getPosicion().getNombre());
+        }));
+        btnDeshipotecar.setOnAction(e -> safeRun(() -> {
+            var actual = juego.getJugadores().get(juego.getTurno());
+            juego.deshipotecar(actual.getAvatar().getPosicion().getNombre());
+        }));
+
+        // Construcción
+        btnCasa.setOnAction(e -> safeRun(() -> juego.edificarCasa()));
+        btnHotel.setOnAction(e -> safeRun(() -> juego.edificarHotel()));
+        btnPiscina.setOnAction(e -> safeRun(() -> juego.edificarPiscina()));
+        btnPista.setOnAction(e -> safeRun(() -> juego.edificarPista()));
+
+        // --- 3. ORGANIZACIÓN VISUAL (Dos filas) ---
+        // Fila 1: Movimiento y Gestión financiera
+        HBox fila1 = new HBox(10, btnLanzar, btnComprar, btnHipotecar, btnDeshipotecar, btnTerminar);
+        fila1.setAlignment(Pos.CENTER);
+
+        // Fila 2: Construcción y Sistema
+        HBox fila2 = new HBox(10, btnCasa, btnHotel, btnPiscina, btnPista, btnSalir);
+        fila2.setAlignment(Pos.CENTER);
+
+        // Panel final con un poco de separación
+        VBox panel = new VBox(10, fila1, fila2);
+        panel.setPadding(new Insets(15));
+
+        return panel;
     }
 
-    @Override
-    public void onError(String mensajeError) {
-        // Usamos Platform.runLater por si el error viene de otro hilo
-        javafx.application.Platform.runLater(() -> {
-            javafx.scene.control.Alert alerta = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
-            alerta.setTitle("⚠️ Error");
-            alerta.setHeaderText(null); // Sin cabecera para ahorrar espacio
-            alerta.setContentText(mensajeError);
-            alerta.showAndWait(); // El juego se para hasta que le das a OK
-        });
-    }
+    // --- LISTENERS ---
 
-    // El resto de métodos los dejamos vacíos por ahora (los usaremos cuando dibujemos el tablero)
-    @Override public void onDadosLanzados(int d1, int d2, boolean db) {}
     @Override
     public void onPropiedadComprada(String nombreJugador, String nombrePropiedad, long precio) {
-        javafx.application.Platform.runLater(() -> {
-            try {
-                // 1. Obtener el color del jugador
-                // (Truco: Miramos de qué color es su ficha en nuestro mapa)
-                javafx.scene.paint.Color colorJugador = (javafx.scene.paint.Color) fichas.get(nombreJugador).getFill();
+        Platform.runLater(() -> {
+            // 1. Pintar el borde en el tablero (Acción visual principal)
+            String color = nombreJugador.equalsIgnoreCase("Pedro") ? "red" : "blue";
+            tableroGui.resaltarCasilla(nombrePropiedad, color);
 
-                // Convertimos el color de JavaFX a formato texto CSS (ej: "0xff0000ff" -> "#ff0000")
-                String colorHex = "#" + colorJugador.toString().substring(2, 8);
+            // 2. Feedback en el LOG (Chat) en lugar de Popup intrusivo
+            areaLog.appendText("\n💰 ¡COMPRA REALIZADA! 💰\n");
+            areaLog.appendText(nombreJugador + " es ahora dueño de " + nombrePropiedad + "\n");
+            areaLog.appendText("Precio pagado: " + precio + "€\n\n");
 
-                // 2. Buscar la casilla visual que corresponde a esa propiedad
-                // Recorremos las 40 casillas buscando la que tenga el nombre correcto
-                for (javafx.scene.layout.StackPane casilla : casillasVisuales) {
-                    // La casilla tiene dentro un Label, lo sacamos para leer el texto
-                    javafx.scene.control.Label lbl = (javafx.scene.control.Label) casilla.getChildren().get(0);
+            // OPCIONAL: Si quieres un sonido, aquí iría.
+            // NO lanzamos Alert() para no interrumpir el flujo.
+        });
+    }
 
-                    if (lbl.getText().equals(nombrePropiedad)) {
-                        // 3. ¡ENCONTRADA! Le cambiamos el borde
-                        // Mantenemos el fondo blanco, pero ponemos borde grueso del color del dueño
-                        casilla.setStyle("-fx-background-color: white; " +
-                                "-fx-border-color: " + colorHex + "; " +
-                                "-fx-border-width: 4;"); // Borde de 4px (muy visible)
-                        break; // Ya la encontramos, dejamos de buscar
-                    }
-                }
-
-                // Extra: Un pequeño popup de celebración
-                onCartaRecibida("COMPRA", nombreJugador + " ha adquirido " + nombrePropiedad);
-
-            } catch (Exception e) {
-                e.printStackTrace();
+    @Override
+    public void onJugadorMovido(String j, String c, int n) {
+        Platform.runLater(() -> {
+            // Fix índice para mover ficha
+            int idx = (n == 0) ? 0 : n - 1;
+            if(fichasVisuales.containsKey(j)) {
+                fichasVisuales.get(j).colocarEn(tableroGui.getContenedor(idx));
             }
-        });
-    }
-    @Override public void onCambioEstadoCarcel(String j, boolean e) {}
-
-    @Override
-    public void onCartaRecibida(String tipo, String mensaje) {
-        javafx.application.Platform.runLater(() -> {
-            javafx.scene.control.Alert carta = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-            carta.setTitle("🃏 Carta de " + tipo);
-            carta.setHeaderText("Has cogido una carta...");
-            carta.setContentText(mensaje);
-            carta.showAndWait();
+            // Actualizar info
+            var actual = juego.getJugadores().get(juego.getTurno());
+            if (actual.getNombre().equals(j)) panelInfo.actualizarPosicion(c);
         });
     }
 
-    // --- MÉTODOS DE ESCUCHA (Listeners) ---
-
     @Override
-    public void onTurnoCambiado(String nuevoJugador) {
-        // Platform.runLater es obligatorio para tocar la interfaz desde otro proceso
-        javafx.application.Platform.runLater(() -> {
-            lblTurno.setText("Turno: " + nuevoJugador);
-
-            // TRUCO: Al cambiar de turno, leemos también el dinero y posición del nuevo jugador
+    public void onTurnoCambiado(String j) {
+        Platform.runLater(() -> {
+            panelInfo.actualizarTurno(j);
             try {
-                monopoly.jugador.Jugador j = juego.getJugadores().get(juego.getTurno());
-                lblDinero.setText("Dinero: " + j.getFortuna() + " €");
-                lblPosicion.setText("Posición: " + j.getAvatar().getPosicion().getNombre());
-            } catch (Exception e) { /* Ignoramos fallos al iniciar */ }
-        });
-    }
-
-    @Override
-    public void onCambioFortuna(String nombreJugador, long fortunaActual, long cantidadCambio) {
-        javafx.application.Platform.runLater(() -> {
-            try {
-                // Solo actualizamos si el cambio de dinero le pasó al jugador actual
-                monopoly.jugador.Jugador actual = juego.getJugadores().get(juego.getTurno());
-                if (actual.getNombre().equals(nombreJugador)) {
-                    lblDinero.setText("Dinero: " + fortunaActual + " €");
-                }
+                var jug = juego.getJugadores().get(juego.getTurno());
+                panelInfo.actualizarDinero(jug.getFortuna());
+                panelInfo.actualizarPosicion(jug.getAvatar().getPosicion().getNombre());
             } catch (Exception e) {}
         });
     }
 
     @Override
-    public void onJugadorMovido(String nombreJugador, String nombreCasilla, int nuevaPosicion) {
-        javafx.application.Platform.runLater(() -> {
+    public void onCambioFortuna(String j, long f, long c) {
+        Platform.runLater(() -> {
             try {
-                // 1. Actualizar texto lateral (lo que ya tenías)
-                monopoly.jugador.Jugador actual = juego.getJugadores().get(juego.getTurno());
-                if (actual.getNombre().equals(nombreJugador)) {
-                    lblPosicion.setText("Posición: " + nombreCasilla);
-                }
-
-                // --- 2. MOVER LA FICHA VISUAL ---
-                if (fichas.containsKey(nombreJugador)) {
-                    javafx.scene.shape.Circle ficha = fichas.get(nombreJugador);
-
-                    // Truco de JavaFX: Para mover un nodo, primero lo quitamos de su padre actual
-                    // (sea cual sea la casilla donde esté)
-                    ((javafx.scene.layout.Pane) ficha.getParent()).getChildren().remove(ficha);
-
-                    // Y lo añadimos a la nueva casilla (usando la lista que creamos en el Paso 2)
-                    casillasVisuales.get(nuevaPosicion).getChildren().add(ficha);
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace(); // Por si acaso
-            }
+                var actual = juego.getJugadores().get(juego.getTurno());
+                if (actual.getNombre().equals(j)) panelInfo.actualizarDinero(f);
+            } catch (Exception e) {}
         });
     }
 
-    // --- MÉTODO PARA DIBUJAR EL TABLERO GRÁFICO ---
-    private javafx.scene.layout.GridPane crearTableroGrafico() {
-        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
-
-        // Estilo del tablero (Fondo azulito suave y huecos)
-        grid.setHgap(2);
-        grid.setVgap(2);
-        grid.setStyle("-fx-background-color: #D4F1F4; -fx-padding: 10; -fx-border-color: black; -fx-border-width: 2;");
-        grid.setAlignment(javafx.geometry.Pos.CENTER);
-
-        // Generamos las 40 casillas del perímetro
-        for (int i = 0; i < 40; i++) {
-            // 1. Crear la cajita visual
-            javafx.scene.layout.StackPane casilla = new javafx.scene.layout.StackPane();
-            casilla.setPrefSize(60, 60); // Tamaño fijo de 60x60 píxeles
-            casillasVisuales.add(casilla);
-            casilla.setStyle("-fx-background-color: white; -fx-border-color: black; -fx-border-width: 1;");
-
-            // 2. Intentar ponerle nombre (Si falla, ponemos el número)
-            String texto = "C" + i;
-            try {
-                // NOTA: Esto requiere que tengas los getters públicos en Juego y Tablero.
-                // Si no los tienes, saltará al catch y pondrá el número, ¡no pasa nada!
-                monopoly.casilla.Casilla c = juego.getTablero().getPosiciones().get(i).get(0);
-                texto = c.getNombre();
-                // Cortamos nombres largos para que quepan
-                if (texto.length() > 8) texto = texto.substring(0, 8) + ".";
-            } catch (Exception e) {
-                // Si no podemos leer el nombre, dejamos el número (C0, C1...)
-            }
-
-            // 3. Etiqueta de texto
-            javafx.scene.control.Label lbl = new javafx.scene.control.Label(texto);
-            lbl.setStyle("-fx-font-size: 9px; -fx-font-weight: bold; -fx-text-alignment: center;");
-            lbl.setWrapText(true);
-            casilla.getChildren().add(lbl);
-
-            // 4. MATEMÁTICAS: Calcular posición (x, y) en la cuadrícula 11x11
-            int x = 0, y = 0;
-            if (i >= 0 && i <= 10) {        // Lado Sur (Salida -> Cárcel)
-                x = 10 - i; y = 10;
-            } else if (i > 10 && i <= 20) { // Lado Oeste (Cárcel -> Parking)
-                x = 0; y = 10 - (i - 10);
-            } else if (i > 20 && i <= 30) { // Lado Norte (Parking -> Ir a Cárcel)
-                x = i - 20; y = 0;
-            } else if (i > 30 && i < 40) {  // Lado Este (Ir a Cárcel -> Salida)
-                x = 10; y = i - 30;
-            }
-
-            // Añadimos la casilla a la cuadrícula
-            grid.add(casilla, x, y);
-        }
-        return grid;
+    @Override
+    public void onMensaje(String m) {
+        String limpio = m.replaceAll("\u001B\\[[;\\d]*m", "");
+        Platform.runLater(() -> areaLog.appendText(limpio + "\n"));
     }
 
-    private void crearFichaVisual(String nombre, javafx.scene.paint.Color color) {
-        // Creamos un círculo de radio 10
-        javafx.scene.shape.Circle ficha = new javafx.scene.shape.Circle(10, color);
-        ficha.setStroke(javafx.scene.paint.Color.BLACK); // Borde negro para que se vea mejor
-        ficha.setStrokeWidth(2);
-
-        // Guardamos la ficha en el mapa
-        fichas.put(nombre, ficha);
-
-        // La ponemos en la casilla de Salida (Posición 0) por defecto
-        casillasVisuales.get(0).getChildren().add(ficha);
+    @Override
+    public void onError(String m) {
+        Platform.runLater(() -> {
+            Alert a = new Alert(Alert.AlertType.ERROR);
+            a.setContentText(m);
+            a.showAndWait();
+        });
     }
 
-    // Este main es necesario para engañar a Java y que arranque JavaFX
-    public static void main(String[] args) {
-        launch(); // Llama internamente al método start()
+    @Override
+    public void onCartaRecibida(String t, String m) {
+        Platform.runLater(() -> {
+            Alert a = new Alert(Alert.AlertType.INFORMATION);
+            a.setTitle("Carta " + t);
+            a.setHeaderText("Evento de " + t);
+            a.setContentText(m);
+            a.showAndWait();
+        });
     }
+
+    // --- UTILS ---
+    @Override public void onDadosLanzados(int d1, int d2, boolean db) {}
+    @Override public void onCambioEstadoCarcel(String j, boolean e) {}
+
+    interface Accion { void run() throws Exception; }
+    private void safeRun(Accion a) {
+        try { a.run(); } catch (Exception e) { onError(e.getMessage()); }
+    }
+
+    public static void main(String[] args) { launch(); }
 }
