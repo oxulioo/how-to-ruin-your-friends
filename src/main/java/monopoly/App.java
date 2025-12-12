@@ -46,12 +46,12 @@ public class App extends Application implements JuegoListener {
 
         // Inicializar Partida
         try {
-            juego.crearJugador("Pedro", "pelota");
-            juego.crearJugador("Maria", "coche");
+            juego.crearJugador("Pedro", "ficha1");
+            juego.crearJugador("Maria", "ficha2");
 
             // Crear Fichas Visuales
-            crearFicha("Pedro", "pelota");
-            crearFicha("Maria", "coche");
+            crearFicha("Pedro", "ficha1");
+            crearFicha("Maria", "ficha2");
 
             if (!juego.getJugadores().isEmpty()) {
                 onTurnoCambiado(juego.getJugadores().get(0).getNombre());
@@ -82,7 +82,7 @@ public class App extends Application implements JuegoListener {
     private VBox crearBotonera() {
         // --- 1. CREACIÓN DE TODOS LOS BOTONES ---
         // Acciones de Turno
-        Button btnLanzar = new Button("🎲 Lanzar");
+        Button btnLanzar = new Button("🎲 Lanzar Dados");
         Button btnTerminar = new Button("⏭ Terminar");
         Button btnSalir = new Button("❌ Salir");
 
@@ -92,10 +92,10 @@ public class App extends Application implements JuegoListener {
         Button btnDeshipotecar = new Button("📈 Deshipotecar");
 
         // Acciones de Construcción
-        Button btnCasa = new Button("🏠 Casa");
-        Button btnHotel = new Button("🏨 Hotel");
-        Button btnPiscina = new Button("🏊 Piscina");
-        Button btnPista = new Button("🎾 Pista");
+        Button btnCasa = new Button("🏠 Edificar Casa");
+        Button btnHotel = new Button("🏨 Edificar Hotel");
+        Button btnPiscina = new Button("🏊 Edificar Piscina");
+        Button btnPista = new Button("🎾 Edificar Pista Deportiva");
 
         // --- 2. ASIGNACIÓN DE ACCIONES ---
         btnLanzar.setOnAction(e -> safeRun(() -> juego.lanzarDados()));
