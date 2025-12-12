@@ -31,6 +31,7 @@ public class MonopolyETSE {
             @Override public void onPropiedadComprada(String j, String p, long pr) {}
             @Override public void onCambioEstadoCarcel(String j, boolean e) {}
             @Override public void onCartaRecibida(String tipo, String mensaje){}
+            @Override public void onEdificioConstruido(String nombreCasilla) {}
         };
 
         // 3. CONECTAR LOS CABLES

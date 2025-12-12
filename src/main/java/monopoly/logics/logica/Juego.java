@@ -142,6 +142,11 @@ public class Juego {
         @Override public void onCartaRecibida(String t, String m) {
             notificarCarta(t, m);
         }
+        @Override
+        public void onEdificioConstruido(String nombreCasilla) {
+            // Rebotamos el evento a todos los listeners (incluida la App)
+            for (JuegoListener l : listeners) l.onEdificioConstruido(nombreCasilla);
+        }
     };
 
     public void mostrarJugadorActual() throws MonopolyEtseException {
@@ -734,6 +739,8 @@ public class Juego {
 
         s.edificar("casa");
         notificarMensaje("Casa construida en " + s.getNombre() + " por " + coste + "€.");
+        // --- AÑADIR ESTO ---
+        for (JuegoListener l : listeners) l.onEdificioConstruido(s.getNombre());
     }
 
 
@@ -766,6 +773,8 @@ public class Juego {
 
         s.edificar("hotel"); // La sustitución de casas se hace dentro de Solar
         notificarMensaje("Hotel construido en " + s.getNombre() + " por " + coste + "€.");
+        // --- AÑADIR ESTO ---
+        for (JuegoListener l : listeners) l.onEdificioConstruido(s.getNombre());
     }
 
 
@@ -798,6 +807,8 @@ public class Juego {
 
         s.edificar("piscina");
         notificarMensaje("Piscina construida en " + s.getNombre() + " por " + coste + "€.");
+        // --- AÑADIR ESTO ---
+        for (JuegoListener l : listeners) l.onEdificioConstruido(s.getNombre());
     }
 
 
@@ -830,6 +841,8 @@ public class Juego {
 
         s.edificar("pista");
         notificarMensaje("Pista de deporte construida en " + s.getNombre() + " por " + coste + "€.");
+        // --- AÑADIR ESTO ---
+        for (JuegoListener l : listeners) l.onEdificioConstruido(s.getNombre());
     }
 
 
@@ -1630,6 +1643,47 @@ public class Juego {
         notificarMensaje("Se ha eliminado el trato " + idTrato);
     }
 
+    // --- TRUCO PARA DESARROLLADORES ---
+    public void cheatCompletarGrupo(String color) throws MonopolyEtseException {
+        if (!hayJugadores()) return;
+        Jugador actual = jugadores.get(turno);
+
+        // 1. Buscamos el grupo (Capitalizamos la primera letra: "rojo" -> "Rojo")
+        String colorCap = Character.toUpperCase(color.charAt(0)) + color.substring(1).toLowerCase();
+
+        // Accedemos al mapa de grupos del tablero
+        monopoly.logics.casilla.Grupo g = tablero.getGrupos().get(colorCap);
+        if (g == null) {
+            throw new AccionInvalidaException("No existe el grupo de color '" + color + "'. (Prueba: Negro, Azul, Rojo...)");
+        }
+
+        // 2. Recorremos todas las casillas de ese grupo y se las asignamos al jugador
+        for (monopoly.logics.casilla.Casilla c : g.getMiembros()) {
+            if (c instanceof monopoly.logics.casilla.Propiedad p) {
+                // Si tenía dueño anterior (otro jugador), se la quitamos
+                Jugador duenoAnt = p.getDueno();
+                if (duenoAnt != null && !duenoAnt.equals(banca) && !duenoAnt.equals(actual)) {
+                    duenoAnt.getPropiedades().remove(p);
+                }
+
+                // Asignar al jugador actual
+                p.setDueno(actual);
+                if (!actual.getPropiedades().contains(p)) {
+                    actual.getPropiedades().add(p);
+                }
+
+                // Opcional: Deshipotecar si estaba bloqueada
+                p.sethipotecada(0);
+
+                // IMPORTANTE: Avisar a la GUI de que se ha "comprado" para pintar el borde de color
+                notificarPropiedadComprada(actual.getNombre(), p.getNombre(), 0);
+            }
+        }
+
+        notificarMensaje("⚡ TRUCO: " + actual.getNombre() + " se ha adueñado del grupo " + colorCap + ".");
+        // Forzamos actualización visual del dinero/estado
+        notificarCambioFortuna(actual.getNombre(), actual.getFortuna(), 0);
+    }
 }
 
 

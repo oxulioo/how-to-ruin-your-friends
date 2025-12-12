@@ -14,21 +14,21 @@ public class PanelInfo {
 
     public PanelInfo() {
         lblTurno = new Label("Turno: -");
-        lblTurno.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: blue;");
+        lblTurno.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: blue;");
 
         lblDinero = new Label("Dinero: - €");
-        lblDinero.setStyle("-fx-font-size: 18px; -fx-text-fill: green;");
+        lblDinero.setStyle("-fx-font-size: 26px; -fx-text-fill: green;");
 
         lblPosicion = new Label("Posición: Salida");
-        lblPosicion.setStyle("-fx-font-size: 18px;");
+        lblPosicion.setStyle("-fx-font-size: 26px;");
 
         lblTitulo = new Label("--- ESTADO ---");
-        lblTitulo.setStyle("-fx-font-size: 18px;");
+        lblTitulo.setStyle("-fx-font-size: 26px;");
 
-        panel = new VBox(20);
-        panel.setPadding(new Insets(20));
+        panel = new VBox(25);
+        panel.setPadding(new Insets(30));
         panel.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #ccc;");
-        panel.setPrefWidth(800); // Un poco más ancho
+        panel.setPrefWidth(650); // Un poco más ancho
 
         panel.getChildren().addAll(lblTitulo, lblTurno, lblDinero, lblPosicion);
     }

@@ -17,21 +17,21 @@ public class FichaGUI {
     public FichaGUI(String nombreJugador, String tipoAvatar) {
         this.nombreJugador = nombreJugador;
 
-        // Carga la imagen (JPG o PNG)
+        // Carga la imagen (JPG o JPOEG)
         Image imagen = cargarImagen("/imagenes/avatar_" + tipoAvatar + ".jpg");
-        if (imagen == null) imagen = cargarImagen("/imagenes/avatar_" + tipoAvatar + ".png");
+        if (imagen == null) imagen = cargarImagen("/imagenes/avatar_" + tipoAvatar + ".jpeg");
         // Si no hay imagen, un icono por defecto
         if (imagen == null) imagen = new Image("https://cdn-icons-png.flaticon.com/512/747/747376.png");
 
         this.imagenView = new ImageView(imagen);
 
         // Tamaño de la ficha
-        this.imagenView.setFitWidth(20);
-        this.imagenView.setFitHeight(20);
+        this.imagenView.setFitWidth(60);
+        this.imagenView.setFitHeight(30);
         this.imagenView.setPreserveRatio(true);
 
         // Recorte circular
-        Circle recorte = new Circle(10, 10, 10);
+        Circle recorte = new Circle(30, 30, 30);
         this.imagenView.setClip(recorte);
 
         // Sombra

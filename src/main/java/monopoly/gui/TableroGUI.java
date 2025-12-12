@@ -6,6 +6,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import monopoly.logics.casilla.Casilla;
 import monopoly.logics.casilla.Solar;
 import monopoly.logics.logica.Juego;
@@ -22,9 +23,10 @@ public class TableroGUI {
     // Lista de contenedores de fichas (FlowPane) indexada por posición (0-39)
     private final List<FlowPane> contenedoresFichas = new ArrayList<>();
 
+
     // Medidas base (Vertical)
-    private final int ANCHO_STD = 50;
-    private final int LARGO_STD = 75;
+    private final int ANCHO_STD = 85;
+    private final int LARGO_STD = 125;
 
     public TableroGUI(Juego juego) {
         this.juego = juego;
@@ -88,11 +90,17 @@ public class TableroGUI {
                 VBox diseño = new VBox();
                 diseño.setAlignment(Pos.TOP_CENTER); // Barra de color siempre ARRIBA en la carta base
 
+            // ... dentro de inicializarTablero ...
                 if (cLogica instanceof Solar) {
                     Pane barraColor = new Pane();
                     barraColor.setPrefSize(w, h * 0.25);
                     String color = ((Solar) cLogica).getGrupo().getColorGrupo();
                     barraColor.setStyle("-fx-background-color: " + obtenerColorHex(color) + "; -fx-border-color: black; -fx-border-width: 0 0 1 0;");
+
+                    // --- AÑADIR ESTA LÍNEA AQUÍ ---
+                    dibujarEdificios(barraColor, (Solar) cLogica);
+                    // -----------------------------
+
                     diseño.getChildren().add(barraColor);
                 } else {
                     // Espaciador si no hay color
@@ -204,5 +212,67 @@ public class TableroGUI {
             case "azul" -> "#0000FF";
             default -> "#ddd";
         };
+    }
+
+// Método principal de dibujo de edificios
+private void dibujarEdificios(Pane contenedor, Solar solar) {
+    HBox filaCasas = new HBox(-10); // 1px de separación
+    filaCasas.setAlignment(Pos.CENTER);
+    // Ajustamos tamaño para que no se salga de la barra de color
+    filaCasas.setPrefSize(contenedor.getPrefWidth(), contenedor.getPrefHeight());
+
+    // 1. CASAS (Hasta 4)
+    if (solar.getNumCasas() > 0) {
+        for (int i = 0; i < solar.getNumCasas(); i++) {
+            // Intenta cargar "casa.png", si no hay, pinta un cuadrado VERDE
+            filaCasas.getChildren().add(crearIcono("casa", Color.LIMEGREEN, 20));
+        }
+    }
+
+    // 2. HOTEL (1)
+    if (solar.getNumHoteles() > 0) {
+        // Intenta cargar "hotel.png", si no hay, pinta un cuadrado ROJO
+        filaCasas.getChildren().add(crearIcono("hotel", Color.RED, 25));
+    }
+
+    // 3. PISCINA (1)
+    if (solar.getNumPiscinas() > 0) {
+        // Intenta cargar "piscina.png", si no hay, pinta un circulo CYAN
+        filaCasas.getChildren().add(crearIcono("piscina", Color.CYAN, 25));
+    }
+
+    // 4. PISTA (1)
+    if (solar.getNumPistas() > 0) {
+        // Intenta cargar "pista.png", si no hay, pinta un cuadrado NARANJA
+        filaCasas.getChildren().add(crearIcono("pista", Color.ORANGE, 25));
+    }
+
+    contenedor.getChildren().add(filaCasas);
+}
+
+    // Método auxiliar inteligente: Busca imagen -> Si falla, crea forma geométrica
+    private javafx.scene.Node crearIcono(String nombreArchivo, Color colorBackup, double tamaño) {
+        try {
+            // 1. Intentamos cargar la imagen (casa.png, hotel.png...)
+            String ruta = "/imagenes/" + nombreArchivo + ".png";
+            InputStream is = getClass().getResourceAsStream(ruta);
+
+            // Soporte para .jpg o .jpeg por si acaso
+            if (is == null) is = getClass().getResourceAsStream("/imagenes/" + nombreArchivo + ".jpg");
+            if (is == null) is = getClass().getResourceAsStream("/imagenes/" + nombreArchivo + ".jpeg");
+
+            if (is != null) {
+                ImageView icono = new ImageView(new Image(is));
+                icono.setFitWidth(tamaño);
+                icono.setFitHeight(tamaño);
+                icono.setPreserveRatio(true);
+                // Le damos una sombrita para que destaque sobre el color de fondo
+                icono.setEffect(new javafx.scene.effect.DropShadow(2, Color.BLACK));
+                return icono;
+            }
+        } catch (Exception e) {
+            // Ignoramos error y vamos al plan B
+        }
+        return null;
     }
 }
